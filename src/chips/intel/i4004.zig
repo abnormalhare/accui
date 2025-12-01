@@ -21,6 +21,12 @@ const SetTime = struct {
     enable: bool,
     timing: T,
     phase: u2,
+
+    pub fn new(timing: T, phase: u2) SetTime {
+        const self = SetTime{ .enable = true, .timing = timing, .phase = phase };
+
+        return self;
+    }
 };
 
 const Conditional = struct {
@@ -29,7 +35,7 @@ const Conditional = struct {
     is_carry: bool,
     is_test: bool,
 
-    fn init(flags: u4) Conditional {
+    fn new(flags: u4) Conditional {
         return Conditional{
             .is_invert = (flags & 0b1000) == 0b1000,
             .is_accum_zero = (flags & 0b0100) == 0b0100,
@@ -38,11 +44,11 @@ const Conditional = struct {
         };
     }
 
-    fn set_bool(self: *Conditional, prev: ?bool, new: bool) bool {
+    fn set_bool(self: *Conditional, prev: ?bool, next: bool) bool {
         _ = self; // makes code look better
 
         if (prev == null) {
-            return new;
+            return next;
         }
 
         const nprev = prev.?;
@@ -50,7 +56,7 @@ const Conditional = struct {
             return false;
         }
 
-        return new;
+        return next;
     }
 
     pub fn pass(self: *Conditional, cpu: *I4004) bool {
@@ -116,7 +122,7 @@ pub const I4004 = struct {
         self.data_bus = 0;
         self.cm_ram = 0;
         self.cm_rom = 0;
-        self.cm_time = SetTime{ false, T.A1, 0 };
+        self.cm_time = SetTime{ .enable = false, .timing = T.A1, .phase = 0 };
 
         self.timing = T.A1;
         self.bank = 0;
@@ -139,13 +145,12 @@ pub const I4004 = struct {
         self.temp = 0;
     }
 
-    pub fn debug_print(self: *I4004, alloc: std.mem.Allocator, step_type: Step) !void {
+    pub fn debug_print(self: *I4004, alloc: std.mem.Allocator, step_type: Step) ![]u8 {
         var list = try std.ArrayList(u8).initCapacity(alloc, 0x2000);
         defer list.deinit(alloc);
         
         const writer = list.writer(alloc);
         
-        try writer.print("\n-----------------------------------------------------------\n", .{});
         try writer.print("| DATA:  0x{X:0>2} |   ROM 0x{X:0>3}   | STACK: 0x{X:0>3} 0x{X:0>3} 0x{X:0>3}  |\n", .{
             self.instr,
             @as(u16, self.stack[0]),
@@ -178,10 +183,11 @@ pub const I4004 = struct {
         try writer.print("| 0x{X:0>1} 0x{X:0>1} 0x{X:0>1} 0x{X:0>1}                                         |\n", .{ self.regs[4],  self.regs[5],  self.regs[6],  self.regs[7]  });
         try writer.print("| 0x{X:0>1} 0x{X:0>1} 0x{X:0>1} 0x{X:0>1}                                         |\n", .{ self.regs[8],  self.regs[9],  self.regs[10], self.regs[11] });
         try writer.print("| 0x{X:0>1} 0x{X:0>1} 0x{X:0>1} 0x{X:0>1}                                         |\n", .{ self.regs[12], self.regs[13], self.regs[14], self.regs[15] });
-        try writer.print("|---------------------------------------------------------|\n", .{});
 
-        reset_screen();
-        std.debug.print("{s}", .{list.items});
+        const ret: []u8 = try alloc.alloc(u8, list.items.len);
+
+        @memcpy(ret, list.items);
+        return ret;
     }
 
     fn get_instr_type(self: *I4004) u4 {
@@ -225,7 +231,9 @@ pub const I4004 = struct {
     }
 
     fn instr_decoder(self: *I4004) void {
-        if (self.clock_phase != 1 and (self.itrl_instr & 0xF0) == 0xE0) return; // maybe we'll actually implement this, but not today
+        if ((self.itrl_instr & 0xF0) != 0xE0) {
+            if (self.clock_phase != 1) return; // maybe we'll actually implement this, but not today
+        }
 
         switch (self.get_instr_type()) {
             // NOP
@@ -236,7 +244,7 @@ pub const I4004 = struct {
                 if (self.flip_two_byte() or self.timing != T.X1) return;
 
                 const cond_flags: u4 = @intCast(self.itrl_instr & 0x0F);
-                var conditions = Conditional.init(cond_flags);
+                var conditions = Conditional.new(cond_flags);
                 const jump_val: u8 = self.instr;
                 if (conditions.pass(self)) {
                     self.stack[0] &= 0xF00;
@@ -254,7 +262,7 @@ pub const I4004 = struct {
                     self.regs[reg + 1] = @truncate(self.instr >> 0);
                 } else { // SRC
                     if (self.timing == T.X2) {
-                        self.set_cm_rom_out(.{ true, T.X3, 0 });
+                        self.set_cm_rom_out(SetTime.new(T.X3, 0));
                     }
                     switch (self.timing) {
                         else => {},
@@ -459,7 +467,7 @@ pub const I4004 = struct {
 
     fn send_stack_to_buffer(self: *I4004) void {
         if (self.timing == T.A3 and self.clock_phase == 2) {
-            self.set_cm_rom_out(.{ true, T.M1, 0 });
+            self.set_cm_rom_out(SetTime.new(T.M1, 0));
         }
 
         if (self.clock_phase != 1) return;
@@ -486,7 +494,7 @@ pub const I4004 = struct {
 
     fn recv_instr_from_buffer(self: *I4004) void {
         if ((self.itrl_instr & 0xF0) == 0xE0 and self.timing == T.M2 and self.clock_phase == 0) {
-            self.set_cm_rom_out(.{ true, T.X1, 0 });
+            self.set_cm_rom_out(SetTime.new(T.X1, 0));
         }
 
         if (self.clock_phase != 2) return;

@@ -69,26 +69,6 @@ pub const I4001 = struct {
         self.cse = 0;
     }
 
-    fn inc_timing(self: *I4001) void {
-        const t_int: u3 = @intCast(@intFromEnum(self.timing));
-        const t_inc: u3, _ = @addWithOverflow(t_int, 1);
-        self.timing = @enumFromInt(t_inc);
-    }
-
-    fn tick_timing(self: *I4001) void {
-        self.clock_phase = get_global_clock();
-        
-        if (self.sync == 1) {
-            self.timing = T.X3;
-            return;
-        }
-
-        if (self.clock_phase == 0) {
-            self.inc_timing();
-            return;
-        }
-    }
-
     fn check_chip_num(self: *I4001) void {
         if (self.clock_phase != 2) return;
 
@@ -140,14 +120,22 @@ pub const I4001 = struct {
     }
 
     fn execute_io_command(self: *I4001) void {
-        if (self.timing != T.X2 or self.clock_phase != 2 or self.src == 0) return;
+        if (self.timing != T.X2 or self.src == 0) return;
 
         switch (self.data_in) {
             else => {},
             // WRR
-            0x2 => self.io_bus = signal_read(),
+            0x2 => {
+                if (self.clock_phase != 2) return;
+
+                self.io_bus = signal_read();
+            },
             // RDR
-            0xA => signal_write(self.io_bus),
+            0xA => {
+                if (self.clock_phase != 1) return;
+                
+                signal_write(self.io_bus);
+            },
         }
 
         self.io_op = 0;
@@ -158,6 +146,26 @@ pub const I4001 = struct {
             self.execute_io_command();
         } else {
             self.check_src();
+        }
+    }
+
+    fn inc_timing(self: *I4001) void {
+        const t_int: u3 = @intCast(@intFromEnum(self.timing));
+        const t_inc: u3, _ = @addWithOverflow(t_int, 1);
+        self.timing = @enumFromInt(t_inc);
+    }
+
+    fn tick_timing(self: *I4001) void {
+        self.clock_phase = get_global_clock();
+        
+        if (self.sync == 1) {
+            self.timing = T.X3;
+            return;
+        }
+
+        if (self.clock_phase == 0) {
+            self.inc_timing();
+            return;
         }
     }
 

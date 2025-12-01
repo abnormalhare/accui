@@ -71,15 +71,15 @@ pub fn main() !void {
         }
     }
 
-    // const filename = "D:/Storage/Documents/GitHub/accui/fibonacci.i44";
-    // const step_type = Step.PHASE;
-    // const pause = true;
-    const filename, const step_type, const pause = try argument_processor(alloc);
-    defer alloc.free(filename);
+    const filename = "D:/Storage/Documents/GitHub/accui/fibonacci.i44";
+    const step_type = Step.TIMING;
+    const pause = true;
+    // const filename, const step_type, const pause = try argument_processor(alloc);
+    // defer alloc.free(filename);
 
-    if (std.mem.eql(u8, filename, "")) {
-        return;
-    }
+    // if (std.mem.eql(u8, filename, "")) {
+    //     return;
+    // }
 
     try Motherboard.init(alloc, filename, step_type, pause);
 

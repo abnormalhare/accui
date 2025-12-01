@@ -2,6 +2,7 @@ const std = @import("std");
 
 const Step = @import("global").Step;
 const clear_screen = @import("global").clear_screen;
+const reset_screen = @import("global").reset_screen;
 
 const I4001 = @import("chips/intel/i4001.zig").I4001;
 const I4002 = @import("chips/intel/i4002.zig").I4002;
@@ -15,7 +16,7 @@ var pause: bool = false;
 
 var cpu: *I4004 = undefined;
 var roms: [16]*I4001 = undefined;
-var rams: [16]*I4001 = undefined;
+var rams: [16]*I4002 = undefined;
 
 var main_thread: std.Thread = undefined;
 var main_thread_ended: bool = false;
@@ -27,7 +28,17 @@ pub fn init(alloc: std.mem.Allocator, filename: []const u8, def_step_type: Step,
     cpu = try I4004.init(alloc);
     errdefer alloc.destroy(cpu);
 
-    var file = try std.fs.cwd().openFile(filename, .{});
+    var file = std.fs.cwd().openFile(filename, .{}) catch |err| switch (err) {
+        error.FileNotFound => {
+            var buf: [0x100]u8 = undefined;
+            _ = try std.fmt.bufPrint(&buf, "{s} is not found!", .{ filename });
+
+            @panic(&buf);
+        },
+        else => {
+            @panic("Filename error");
+        },
+    };
     defer file.close();
 
     const stat = try file.stat();
@@ -54,7 +65,7 @@ pub fn init(alloc: std.mem.Allocator, filename: []const u8, def_step_type: Step,
     errdefer for (&roms) |*rom| { alloc.destroy(rom.*); };
 
     for (&rams, 0..) |*ram, idx| {
-        ram.* = try I4002.init(alloc, idx & 3);
+        ram.* = try I4002.init(alloc, @truncate(idx & 3));
     }
 
     step_type = def_step_type;
@@ -65,6 +76,9 @@ fn reset_reset() void {
     cpu.reset = 0;
     for (&roms) |rom| {
         rom.reset = 0;
+    }
+    for (&rams) |ram| {
+        ram.reset = 0;
     }
 }
 
@@ -79,6 +93,10 @@ pub fn get_global_clock() u2 {
 
 pub fn signal_write(val: u4) void {
     data_bus = val;
+}
+
+pub fn signal_io_write(val: u4) void {
+    _ = val; // no ports connected yet
 }
 
 pub fn signal_read() u4 {
@@ -113,6 +131,9 @@ fn run_motherboard() void {
         for (roms) |rom| {
             rom.tick();
         }
+        for (rams) |ram| {
+            ram.tick();
+        }
 
         if (pause and should_pause()) {
             if (step_type == Step.PHASE) {
@@ -126,22 +147,42 @@ fn run_motherboard() void {
     main_thread_ended = true;
 }
 
+var debug_ram_page: u4 = 0;
+
 fn print_motherboard(alloc: std.mem.Allocator) !void {
     while (cpu.running) {
-        try cpu.debug_print(alloc, step_type);
+        const cpu_dbp = try cpu.debug_print(alloc, step_type);
+        defer alloc.free(cpu_dbp);
 
-        std.debug.print("| MOTHERBOARD DATA: {b:0>4} | CHIP SELECT: ", .{ data_bus });
+        const ram_dbp = try rams[debug_ram_page].debug_print(alloc);
+        defer alloc.free(ram_dbp);
+
+
+        var list = try std.ArrayList(u8).initCapacity(alloc, 0x2000);
+        defer list.deinit(alloc);
+        
+        const writer = list.writer(alloc);
+        
+        try writer.print("-----------------------------------------------------------\n", .{});
+        try writer.print("{s}", .{ cpu_dbp });
+        try writer.print("|---------------------------------------------------------|\n", .{});
+        try writer.print("{s}", .{ ram_dbp });
+        try writer.print("|---------------------------------------------------------|\n", .{});
+        try writer.print("| MOTHERBOARD DATA: {b:0>4} | CHIP SELECT: ", .{ data_bus });
 
         for (roms) |rom| {
             if (rom.cse == 1) {
-                std.debug.print("{X:0>1}    |            |\n", .{rom.chip_num});
+                try writer.print("{X:0>1}    |            |\n", .{rom.chip_num});
                 break;
             }
         } else {
-            std.debug.print("NONE |            |\n", .{});
+            try writer.print("NONE |            |\n", .{});
         }
 
-        std.debug.print("-----------------------------------------------------------\n", .{});
+        try writer.print("-----------------------------------------------------------\n", .{});
+
+        reset_screen();
+        std.debug.print("{s}", .{list.items});
     }
 
     debug_thread_ended = true;
