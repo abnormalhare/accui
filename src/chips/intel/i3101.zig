@@ -31,6 +31,7 @@ pub const I3101 = struct {
 
         if (self.chip_select == 1) {
             self.data_out = self.ram[self.addr];
+            signal_write(self.data_out);
         }
 
         if (self.write_enable == 1) {
