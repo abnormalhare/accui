@@ -71,9 +71,6 @@ pub fn main() !void {
         }
     }
 
-    // const filename = "D:/Storage/Documents/GitHub/accui/fibonacci.i44";
-    // const step_type = Step.NORMAL;
-    // const pause = false;
     const filename, const step_type, const pause = try argument_processor(alloc);
     defer alloc.free(filename);
 
