@@ -1,8 +1,12 @@
 const std = @import("std");
 
-const Step = @import("global").Step;
-const clear_screen = @import("global").clear_screen;
-const reset_screen = @import("global").reset_screen;
+const Global = @import("global");
+const Step = Global.Step;
+const CompType = Global.CompType;
+const clear_screen = Global.clear_screen;
+const reset_screen = Global.reset_screen;
+const num_to_list = Global.num_to_list;
+const list_to_num = Global.list_to_num;
 
 const I4001 = @import("chips/intel/i4001.zig").I4001;
 const I4002 = @import("chips/intel/i4002.zig").I4002;
@@ -24,21 +28,12 @@ var main_thread_ended: bool = false;
 var debug_thread: std.Thread = undefined;
 var debug_thread_ended: bool = false;
 
+// Reads 
 pub fn init(alloc: std.mem.Allocator, filename: []const u8, def_step_type: Step, def_pause: bool) !void {
     cpu = try I4004.init(alloc);
     errdefer alloc.destroy(cpu);
 
-    var file = std.fs.cwd().openFile(filename, .{}) catch |err| switch (err) {
-        error.FileNotFound => {
-            var buf: [0x100]u8 = undefined;
-            _ = try std.fmt.bufPrint(&buf, "{s} is not found!", .{ filename });
-
-            @panic(&buf);
-        },
-        else => {
-            @panic("Filename error");
-        },
-    };
+    var file = try std.fs.cwd().openFile(filename, .{});
     defer file.close();
 
     const stat = try file.stat();
@@ -83,7 +78,7 @@ fn reset_reset() void {
 }
 
 pub var global_clock: u2 = 0;
-pub var data_bus: u4 = 0;
+pub var wires: [16]u1 = [_]u1{ 0 } ** 16;
 
 //// CHIP SIGNAL INSTRUCTIONS ////
 
@@ -91,16 +86,27 @@ pub fn get_global_clock() u2 {
     return global_clock;
 }
 
-pub fn signal_write(val: u4) void {
-    data_bus = val;
+pub fn signal_write_bus(val: u4) void {
+    wires[0] = @truncate(val >> 0);
+    wires[1] = @truncate(val >> 1);
+    wires[2] = @truncate(val >> 2);
+    wires[3] = @truncate(val >> 3);
 }
 
-pub fn signal_io_write(val: u4) void {
-    _ = val; // no ports connected yet
+// Allows for chips to no need to know where they are
+// sending their data, we handle it here.
+pub fn signal_write(val: []u1, from: CompType, pin: u8) void {
+    _ = val; _ = from; _ = pin;
 }
 
-pub fn signal_read() u4 {
+pub fn signal_read_bus() u4 {
+    const data_bus: u4 = list_to_num(wires, 4);
     return data_bus;
+}
+
+pub fn signal_read(from: CompType, pin: u8) []u1 {
+    _ = from; _ = pin;
+    return wires;
 }
 
 pub fn signal_cm() void {
@@ -112,7 +118,6 @@ pub fn signal_cm() void {
         const shf_cnt: u4 = std.math.pow(u4, 2, @intCast(idx / 4));
         ram.cm_ram = @truncate(cpu.cm_ram & shf_cnt);
     }
-
 }
 
 ////
@@ -174,7 +179,7 @@ fn print_motherboard(alloc: std.mem.Allocator) !void {
         try writer.print("|---------------------------------------------------------|\n", .{});
         try writer.print("{s}", .{ ram_dbp });
         try writer.print("|---------------------------------------------------------|\n", .{});
-        try writer.print("| MOTHERBOARD DATA: {b:0>4} | CHIP SELECT: ", .{ data_bus });
+        try writer.print("| MOTHERBOARD DATA: {b:0>4} | CHIP SELECT: ", .{ signal_read_bus() });
 
         for (roms) |rom| {
             if (rom.cse == 1) {

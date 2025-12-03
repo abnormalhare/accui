@@ -4,8 +4,8 @@ const Global = @import("global");
 const Step = Global.Step;
 
 const Motherboard = @import("../../motherboard.zig");
-const signal_read  = Motherboard.signal_read;
-const signal_write = Motherboard.signal_write;
+const signal_read_bus  = Motherboard.signal_read_bus;
+const signal_write_bus = Motherboard.signal_write_bus;
 const get_global_clock = Motherboard.get_global_clock;
 
 const T = enum(u3) {
@@ -119,7 +119,7 @@ pub const I4002 = struct {
         self.io_op = self.cm_ram;
 
         if (self.io_op == 1) {
-            self.data_bus = signal_read();
+            self.data_bus = signal_read_bus();
         }
     }
 
@@ -136,7 +136,7 @@ pub const I4002 = struct {
 
         if (self.timing != T.X2) return;
 
-        self.data_bus = signal_read();
+        self.data_bus = signal_read_bus();
 
         switch (self.instr) {
             else => {},
@@ -165,21 +165,21 @@ pub const I4002 = struct {
             0x8...0x9, 0xB => {
                 if (self.clock_phase != 1) return;
 
-                signal_write(self.ram[self.yreg].data[self.xreg]);
+                signal_write_bus(self.ram[self.yreg].data[self.xreg]);
                 self.reset_io();
             },
             // RDR
             0xA => {
                 if (self.clock_phase != 1) return;
                 
-                signal_write(self.io);
+                signal_write_bus(self.io);
                 self.reset_io();
             },
             // RD(0-3)
             0xC...0xF => {
                 if (self.clock_phase != 1) return;
 
-                signal_write(self.ram[self.yreg].stat[self.instr & 3]);
+                signal_write_bus(self.ram[self.yreg].stat[self.instr & 3]);
                 self.reset_io();
             }
         }
@@ -189,7 +189,7 @@ pub const I4002 = struct {
     fn check_src(self: *I4002) void {
         if (self.clock_phase != 2) return;
 
-        self.data_bus = signal_read();
+        self.data_bus = signal_read_bus();
         const chip_num: u2 = @truncate(self.data_bus >> 2);
 
         switch (self.timing) {

@@ -2,6 +2,8 @@ const std = @import("std");
 const Step = @import("global").Step;
 const Motherboard = @import("motherboard.zig");
 
+const ver: []const u8 = "0.00.2";
+
 fn argument_processor(alloc: std.mem.Allocator) !struct { []u8, Step, bool } {
     var args_iter = try std.process.ArgIterator.initWithAllocator(alloc);
     defer args_iter.deinit();
@@ -14,7 +16,7 @@ fn argument_processor(alloc: std.mem.Allocator) !struct { []u8, Step, bool } {
 
     while (args_iter.next()) |str| {
         if (std.mem.eql(u8, str, "--help")) {
-            std.debug.print("The Accui Project v0.00.1\nCommand Usage: [emu].exe [filename].i44 {{args}}\n\n", .{});
+            std.debug.print("The Accui Project v{s}\nCommand Usage: [emu].exe [filename].i44 {{args}}\n\n", .{ ver });
             std.debug.print("Arguments:\n", .{});
             std.debug.print("-s (off|instr|timing|phase) : Step   | Sets the type of stepping used:\n  - instr: steps every instruction cycle\n  - timing: steps every clock cycle\n  - phase: steps every clock phase\n\n", .{});
             std.debug.print("-p                          : Pause  | Sets whether to pause", .{});
@@ -75,6 +77,7 @@ pub fn main() !void {
     defer alloc.free(filename);
 
     if (std.mem.eql(u8, filename, "")) {
+        std.debug.print("The Accui Project v{s}\nCommand Usage: [emu].exe [filename].i44 {{args}}\n", .{ ver });
         return;
     }
 

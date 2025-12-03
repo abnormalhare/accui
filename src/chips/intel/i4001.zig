@@ -4,8 +4,8 @@ const Global = @import("global");
 const Step = Global.Step;
 
 const Motherboard = @import("../../motherboard.zig");
-const signal_read  = Motherboard.signal_read;
-const signal_write = Motherboard.signal_write;
+const signal_read_bus  = Motherboard.signal_read_bus;
+const signal_write_bus = Motherboard.signal_write_bus;
 const get_global_clock = Motherboard.get_global_clock;
 
 const T = enum(u3) {
@@ -72,7 +72,7 @@ pub const I4001 = struct {
     fn check_chip_num(self: *I4001) void {
         if (self.clock_phase != 2) return;
 
-        self.data_in = signal_read();
+        self.data_in = signal_read_bus();
 
         self.cse = @intFromBool(self.data_in == self.chip_num);
     }
@@ -80,7 +80,7 @@ pub const I4001 = struct {
     fn recv_stack_from_buffer(self: *I4001) void {
         if (self.clock_phase != 2) return;
         
-        self.data_in = signal_read();
+        self.data_in = signal_read_bus();
 
         switch (self.timing) {
             else => {},
@@ -98,12 +98,12 @@ pub const I4001 = struct {
             T.M2 => self.data_out = @truncate(self.rom[self.addr] >> 0),
         }
 
-        signal_write(self.data_out);
+        signal_write_bus(self.data_out);
 
         if (self.timing == T.M2) {
             self.io_op = self.cm_rom;
             if (self.io_op == 1) {
-                self.data_in = signal_read();
+                self.data_in = signal_read_bus();
             }
         }
     }
@@ -111,7 +111,7 @@ pub const I4001 = struct {
     fn check_src(self: *I4001) void {
         if (self.clock_phase != 2 or self.cse == 0 or self.cm_rom == 0) return;
 
-        self.data_in = signal_read();
+        self.data_in = signal_read_bus();
 
         switch (self.timing) {
             else => {},
@@ -128,13 +128,13 @@ pub const I4001 = struct {
             0x2 => {
                 if (self.clock_phase != 2) return;
 
-                self.io_bus = signal_read();
+                self.io_bus = signal_read_bus();
             },
             // RDR
             0xA => {
                 if (self.clock_phase != 1) return;
                 
-                signal_write(self.io_bus);
+                signal_write_bus(self.io_bus);
             },
         }
 

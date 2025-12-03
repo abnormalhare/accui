@@ -6,8 +6,8 @@ const CompType = Global.CompType;
 const reset_screen = Global.reset_screen;
 
 const Motherboard = @import("../../motherboard.zig");
-const signal_read  = Motherboard.signal_read;
-const signal_write = Motherboard.signal_write;
+const signal_read_bus  = Motherboard.signal_read_bus;
+const signal_write_bus = Motherboard.signal_write_bus;
 const signal_cm = Motherboard.signal_cm;
 const get_global_clock = Motherboard.get_global_clock;
 
@@ -275,7 +275,7 @@ pub const I4004 = struct {
                         T.X3 => self.data_bus = self.regs[reg + 1],
                     }
 
-                    signal_write(self.data_bus);
+                    signal_write_bus(self.data_bus);
                 }
             },
 
@@ -386,7 +386,7 @@ pub const I4004 = struct {
             0xE => { // Write/Read IO
                 if (self.timing == T.X2 and self.clock_phase == 1) {
                     self.data_bus = self.accum;
-                    signal_write(self.data_bus);
+                    signal_write_bus(self.data_bus);
                 }
                 if (self.timing == T.X3 and self.clock_phase == 2) {
                     switch (self.instr & 0x0F) {
@@ -499,7 +499,7 @@ pub const I4004 = struct {
             T.A3 => self.data_bus = @intCast((self.stack[0] & 0xF00) >> 8),
         }
 
-        signal_write(self.data_bus);
+        signal_write_bus(self.data_bus);
     }
 
     fn recv_instr_from_buffer(self: *I4004) void {
@@ -509,7 +509,7 @@ pub const I4004 = struct {
 
         if (self.clock_phase != 2) return;
 
-        self.data_bus = signal_read();
+        self.data_bus = signal_read_bus();
 
         switch (self.timing) {
             else => {},
