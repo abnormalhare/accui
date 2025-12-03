@@ -65,7 +65,7 @@ pub fn init(alloc: std.mem.Allocator, filename: []const u8, def_step_type: Step,
     errdefer for (&roms) |*rom| { alloc.destroy(rom.*); };
 
     for (&rams, 0..) |*ram, idx| {
-        ram.* = try I4002.init(alloc, @truncate(idx & 3));
+        ram.* = try I4002.init(alloc, @truncate(idx));
     }
 
     step_type = def_step_type;
@@ -107,6 +107,12 @@ pub fn signal_cm() void {
     for (roms) |rom| {
         rom.cm_rom = cpu.cm_rom;
     }
+    
+    for (rams, 0..) |ram, idx| {
+        const shf_cnt: u4 = std.math.pow(u4, 2, @intCast(idx / 4));
+        ram.cm_ram = @truncate(cpu.cm_ram & shf_cnt);
+    }
+
 }
 
 ////

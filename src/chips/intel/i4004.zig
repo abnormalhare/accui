@@ -201,12 +201,17 @@ pub const I4004 = struct {
 
     fn set_cm_rom_out(self: *I4004, end: SetTime) void {
         self.cm_time = end;
+
+        self.cm_rom = 1;
+        self.cm_ram = self.get_cm_ram();
+
+        signal_cm();
     }
 
     fn get_cm_ram(self: *I4004) u4 {
         return switch (self.bank) {
             0 => 0b0001,
-            else => self.bank * 2,
+            else => @as(u4, self.bank) * 2,
         };
     }
 
@@ -269,6 +274,8 @@ pub const I4004 = struct {
                         T.X2 => self.data_bus = self.regs[reg + 0],
                         T.X3 => self.data_bus = self.regs[reg + 1],
                     }
+
+                    signal_write(self.data_bus);
                 }
             },
 
@@ -377,7 +384,10 @@ pub const I4004 = struct {
             },
 
             0xE => { // Write/Read IO
-                if (self.timing == T.X2 and self.clock_phase == 1) self.data_bus = self.accum;
+                if (self.timing == T.X2 and self.clock_phase == 1) {
+                    self.data_bus = self.accum;
+                    signal_write(self.data_bus);
+                }
                 if (self.timing == T.X3 and self.clock_phase == 2) {
                     switch (self.instr & 0x0F) {
                         // WR(M,R,0,1,2,3), WMP, WPM
@@ -493,7 +503,7 @@ pub const I4004 = struct {
     }
 
     fn recv_instr_from_buffer(self: *I4004) void {
-        if ((self.itrl_instr & 0xF0) == 0xE0 and self.timing == T.M2 and self.clock_phase == 0) {
+        if ((self.instr & 0xF0) == 0xE0 and self.timing == T.M2 and self.clock_phase == 0) {
             self.set_cm_rom_out(SetTime.new(T.X1, 0));
         }
 

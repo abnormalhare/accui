@@ -6,7 +6,6 @@ const Step = Global.Step;
 const Motherboard = @import("../../motherboard.zig");
 const signal_read  = Motherboard.signal_read;
 const signal_write = Motherboard.signal_write;
-const signal_io_write = Motherboard.signal_io_write;
 const get_global_clock = Motherboard.get_global_clock;
 
 const T = enum(u3) {
@@ -99,17 +98,13 @@ pub const I4002 = struct {
                 }
 
                 try writer.print("{X:0>1}{X:0>1}{X:0>1}{X:0>1}    ", .{
-                    reg.data[i + 0], reg.data[i + 1], reg.data[i + 2], reg.data[i + 3]
+                    reg.data[i * 4 + 0], reg.data[i * 4 + 1], reg.data[i * 4 + 2], reg.data[i * 4 + 3]
                 });
 
                 if (j == 3) {
                     try writer.print("         |\n", .{});
                 }
             }
-        }
-
-        if (self.io_op == 1) {
-            try writer.print("EXECUTING: {d}", .{ self.chip_num });
         }
 
         const ret: []u8 = try alloc.alloc(u8, list.items.len);
@@ -119,19 +114,21 @@ pub const I4002 = struct {
     }
 
     fn check_io(self: *I4002) void {
-        if (self.clock_phase != 1) return;
+        if (self.clock_phase != 1 or self.src == 0) return;
 
         self.io_op = self.cm_ram;
 
         if (self.io_op == 1) {
             self.data_bus = signal_read();
         }
+    }
 
+    fn reset_io(self: *I4002) void {
+        self.io_op = 0;
+        self.src = 0;
     }
 
     fn execute_io_command(self: *I4002) void {
-        if (self.src == 0) return;
-
         if (self.timing == T.X1 and self.clock_phase == 2) {
             self.instr = self.data_bus;
             return;
@@ -148,40 +145,49 @@ pub const I4002 = struct {
                 if (self.clock_phase != 2) return;
 
                 self.ram[self.yreg].data[self.xreg] = self.data_bus;
+                self.reset_io();
             },
+            // WMP
             0x1 => {
                 if (self.clock_phase != 2) return;
 
                 self.io = self.data_bus;
+                self.reset_io();
             },
+            // WR(0-3)
             0x4...0x7 => {
                 if (self.clock_phase != 2) return;
 
                 self.ram[self.yreg].stat[self.instr & 3] = self.data_bus;
+                self.reset_io();
             },
+            // SBM, RDM, ADM
             0x8...0x9, 0xB => {
                 if (self.clock_phase != 1) return;
 
-                signal_io_write(self.ram[self.yreg].data[self.xreg]);
+                signal_write(self.ram[self.yreg].data[self.xreg]);
+                self.reset_io();
             },
             // RDR
             0xA => {
                 if (self.clock_phase != 1) return;
                 
                 signal_write(self.io);
+                self.reset_io();
             },
+            // RD(0-3)
             0xC...0xF => {
                 if (self.clock_phase != 1) return;
 
-                signal_io_write(self.ram[self.yreg].stat[self.instr & 3]);
+                signal_write(self.ram[self.yreg].stat[self.instr & 3]);
+                self.reset_io();
             }
         }
 
-        self.io_op = 0;
     }
 
     fn check_src(self: *I4002) void {
-        if (self.clock_phase != 2 or self.io_op == 0) return;
+        if (self.clock_phase != 2) return;
 
         self.data_bus = signal_read();
         const chip_num: u2 = @truncate(self.data_bus >> 2);
@@ -189,7 +195,7 @@ pub const I4002 = struct {
         switch (self.timing) {
             else => {},
             T.X2 => {
-                self.src = @intFromBool(self.chip_num == chip_num);
+                self.src = @intFromBool(self.chip_num == chip_num and self.cm_ram == 1);
                 if (self.src == 0) return;
 
                 self.yreg = @truncate(self.data_bus);
