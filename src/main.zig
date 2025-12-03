@@ -2,7 +2,7 @@ const std = @import("std");
 const Step = @import("global").Step;
 const Motherboard = @import("motherboard.zig");
 
-const ver: []const u8 = "0.00.2";
+const ver: []const u8 = "0.00.3";
 
 fn argument_processor(alloc: std.mem.Allocator) !struct { []u8, Step, bool } {
     var args_iter = try std.process.ArgIterator.initWithAllocator(alloc);

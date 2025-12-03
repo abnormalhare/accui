@@ -22,8 +22,6 @@ pub const I1101 = struct {
     read_write: u1,
     chip_select: u1,
 
-    alloc: std.mem.Allocator,
-
     pub fn init(alloc: std.mem.Allocator) !*I1101 {
         const self = try alloc.create(I1101);
 
@@ -39,13 +37,10 @@ pub const I1101 = struct {
         self.read_write = 0;
         self.chip_select = 0;
 
-        self.alloc = alloc;
-
         return self;
     }
 
     pub fn tick(self: *I1101) void {
-
         switch (self.read_write) {
             // read
             0 => {
