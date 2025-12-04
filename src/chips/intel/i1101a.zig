@@ -41,6 +41,9 @@ pub const I1101 = struct {
     }
 
     pub fn tick(self: *I1101) void {
+        self.read_write  = list_to_num(signal_read(.I1101A, 15), 1);
+        self.chip_select = list_to_num(signal_read(.I1101A, 16), 1);
+
         switch (self.read_write) {
             // read
             0 => {

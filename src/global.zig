@@ -13,6 +13,7 @@ pub const CompType = enum {
     I3101,
     I4001,
     I4002,
+    I4003,
     I4004,
 };
 

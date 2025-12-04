@@ -28,7 +28,10 @@ pub const I1103 = struct {
     }
 
     pub fn tick(self: *I1103) !void {
-        if (self.chip_select == 0) return;
+        self.read_write  = list_to_num(signal_read(.I1103, 18), 1);
+        self.chip_enable = list_to_num(signal_read(.I1103, 16), 1);
+
+        if (self.chip_enable == 0) return;
 
         const wiresx = signal_read(.I1103, 1);
         const xreg: u5 = @truncate(list_to_num(wiresx, 5));

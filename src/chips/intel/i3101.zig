@@ -27,6 +27,9 @@ pub const I3101 = struct {
     }
 
     pub fn tick(self: *I3101) !void {
+        self.write_enable = list_to_num(signal_read(.I3101, 3), 1);
+        self.chip_select  = list_to_num(signal_read(.I3101, 2), 1);
+
         if (self.chip_select == 0) {
             const wires = signal_read(.I3101, 1);
             const addr = list_to_num(wires, 4);
