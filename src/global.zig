@@ -31,11 +31,11 @@ pub fn num_to_list(out: *[]u1, val: u16, cnt: u5) void {
 }
 
 pub fn list_to_num(list: []u1, cnt: u5) u16 {
-    const num: u16 = 0;
+    var num: u16 = 0;
 
     for (0..cnt) |sft| {
-        num |= list[sft] << sft;
+        num |= @as(u16, list[sft]) << @truncate(sft);
     }
 
-    return list;
+    return num;
 }

@@ -58,7 +58,7 @@ pub const I1101 = struct {
             // write
             1 => {
                 const wires = signal_read(.I1101A, 12);
-                self.data_in = list_to_num(wires, 1);
+                self.data_in = @truncate(list_to_num(wires, 1));
                 
                 self.ram[self.yreg][self.xreg] = self.data_in;
             }

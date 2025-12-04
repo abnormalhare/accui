@@ -16,7 +16,7 @@ const T = @import("chips/intel/i4004.zig").T;
 const SECOND = 1_000_000_000;
 
 var step_type: Step = Step.NORMAL;
-var pause: bool = false;
+var pause_time: f32 = 0;
 
 var cpu: *I4004 = undefined;
 var roms: [16]*I4001 = undefined;
@@ -29,11 +29,16 @@ var debug_thread: std.Thread = undefined;
 var debug_thread_ended: bool = false;
 
 // Reads 
-pub fn init(alloc: std.mem.Allocator, filename: []const u8, def_step_type: Step, def_pause: bool) !void {
+pub fn init(alloc: std.mem.Allocator, filename: []const u8, def_step_type: Step, def_pause_time: f32) !void {
     cpu = try I4004.init(alloc);
     errdefer alloc.destroy(cpu);
 
-    var file = try std.fs.cwd().openFile(filename, .{});
+    var file = std.fs.cwd().openFile(filename, .{}) catch |err| switch (err) {
+        else => {
+            std.debug.print("ERROR WITH FILENAME: {s}\n", .{filename});
+            @panic("");
+        }
+    };
     defer file.close();
 
     const stat = try file.stat();
@@ -64,7 +69,7 @@ pub fn init(alloc: std.mem.Allocator, filename: []const u8, def_step_type: Step,
     }
 
     step_type = def_step_type;
-    pause = def_pause;
+    pause_time = def_pause_time;
 }
 
 fn reset_reset() void {
@@ -100,7 +105,7 @@ pub fn signal_write(val: []u1, from: CompType, pin: u8) void {
 }
 
 pub fn signal_read_bus() u4 {
-    const data_bus: u4 = list_to_num(wires, 4);
+    const data_bus: u4 = @truncate(list_to_num(&wires, 4));
     return data_bus;
 }
 
@@ -146,12 +151,8 @@ fn run_motherboard() void {
             ram.tick();
         }
 
-        if (pause and should_pause()) {
-            if (step_type == Step.PHASE) {
-                std.Thread.sleep(SECOND / 2);
-            } else {
-                std.Thread.sleep(SECOND);
-            }
+        if (pause_time != 0 and should_pause()) {
+            std.Thread.sleep(@intFromFloat(SECOND * pause_time));
         }
     }
 

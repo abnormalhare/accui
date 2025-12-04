@@ -31,10 +31,10 @@ pub const I1103 = struct {
         if (self.chip_select == 0) return;
 
         const wiresx = signal_read(.I1103, 1);
-        const xreg = list_to_num(wiresx, 5);
+        const xreg: u5 = @truncate(list_to_num(wiresx, 5));
         
         const wiresy = signal_read(.I1103, 6);
-        const yreg = list_to_num(wiresy, 5);
+        const yreg: u5 = @truncate(list_to_num(wiresy, 5));
         
         switch (self.read_write) {
             0 => {
@@ -43,7 +43,7 @@ pub const I1103 = struct {
             },
             1 => {
                 const wires = signal_read(.I1103, 12);
-                self.ram[yreg][xreg] = list_to_num(wires, 1);
+                self.ram[yreg][xreg] = @truncate(list_to_num(wires, 1));
             }
         }
     }
