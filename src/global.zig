@@ -25,9 +25,10 @@ pub fn reset_screen() void {
     std.debug.print("\x1B[H", .{});
 }
 
-pub fn num_to_list(out: *[]u1, val: u16, cnt: u5) void {
+pub fn num_to_list(out: []u1, val: u16, cnt: u5) void {
     for (0..cnt) |sft| {
-        out.*[sft] = @truncate(val >> sft);
+        const tsft: u4 = @truncate(sft);
+        out[sft] = @truncate(val >> tsft);
     }
 }
 

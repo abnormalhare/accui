@@ -2,10 +2,15 @@ const std = @import("std");
 
 const Global = @import("global");
 const Step = Global.Step;
+const CompType = Global.CompType;
+const num_to_list = Global.num_to_list;
+const list_to_num = Global.list_to_num;
 
-const Motherboard = @import("../../motherboard.zig");
+const Motherboard = @import("../../../motherboard.zig");
 const signal_read_bus  = Motherboard.signal_read_bus;
 const signal_write_bus = Motherboard.signal_write_bus;
+const signal_read  = Motherboard.signal_read;
+const signal_write = Motherboard.signal_write;
 const get_global_clock = Motherboard.get_global_clock;
 
 const T = enum(u3) {
@@ -152,6 +157,11 @@ pub const I4002 = struct {
                 if (self.clock_phase != 2) return;
 
                 self.io = self.data_bus;
+
+                var out: [4]u1 = [_]u1{ 0 } ** 4;
+                num_to_list(&out, self.io, 4);
+                signal_write(&out, .I4002, 13);
+
                 self.reset_io();
             },
             // WR(0-3)

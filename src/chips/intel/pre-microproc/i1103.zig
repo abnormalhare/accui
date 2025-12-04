@@ -5,7 +5,7 @@ const CompType = Global.CompType;
 const num_to_list = Global.num_to_list;
 const list_to_num = Global.list_to_num;
 
-const Motherboard = @import("../../motherboard.zig");
+const Motherboard = @import("../../../motherboard.zig");
 const signal_read  = Motherboard.signal_read;
 const signal_write = Motherboard.signal_write;
 
@@ -28,8 +28,8 @@ pub const I1103 = struct {
     }
 
     pub fn tick(self: *I1103) !void {
-        self.read_write  = list_to_num(signal_read(.I1103, 18), 1);
-        self.chip_enable = list_to_num(signal_read(.I1103, 16), 1);
+        self.read_write  = @truncate(list_to_num(signal_read(.I1103, 18), 1));
+        self.chip_enable = @truncate(list_to_num(signal_read(.I1103, 16), 1));
 
         if (self.chip_enable == 0) return;
 
@@ -41,8 +41,8 @@ pub const I1103 = struct {
         
         switch (self.read_write) {
             0 => {
-                const out: [4]u1 = [_]u1{ ~self.ram[yreg][xreg] };
-                signal_write(out, .I1103, 1);
+                var out: [4]u1 = [_]u1{ ~self.ram[yreg][xreg] };
+                signal_write(&out, .I1103, 1);
             },
             1 => {
                 const wires = signal_read(.I1103, 12);

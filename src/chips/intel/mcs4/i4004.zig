@@ -5,7 +5,7 @@ const Step = Global.Step;
 const CompType = Global.CompType;
 const reset_screen = Global.reset_screen;
 
-const Motherboard = @import("../../motherboard.zig");
+const Motherboard = @import("../../../motherboard.zig");
 const signal_read_bus  = Motherboard.signal_read_bus;
 const signal_write_bus = Motherboard.signal_write_bus;
 const signal_cm = Motherboard.signal_cm;

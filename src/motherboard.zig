@@ -5,13 +5,12 @@ const Step = Global.Step;
 const CompType = Global.CompType;
 const clear_screen = Global.clear_screen;
 const reset_screen = Global.reset_screen;
-const num_to_list = Global.num_to_list;
 const list_to_num = Global.list_to_num;
 
-const I4001 = @import("chips/intel/i4001.zig").I4001;
-const I4002 = @import("chips/intel/i4002.zig").I4002;
-const I4004 = @import("chips/intel/i4004.zig").I4004;
-const T = @import("chips/intel/i4004.zig").T;
+const I4001 = @import("chips/intel/mcs4/i4001.zig").I4001;
+const I4002 = @import("chips/intel/mcs4/i4002.zig").I4002;
+const I4004 = @import("chips/intel/mcs4/i4004.zig").I4004;
+const T = @import("chips/intel/mcs4/i4004.zig").T;
 
 const SECOND = 1_000_000_000;
 
@@ -111,7 +110,7 @@ pub fn signal_read_bus() u4 {
 
 pub fn signal_read(from: CompType, pin: u8) []u1 {
     _ = from; _ = pin;
-    return wires;
+    return &wires;
 }
 
 pub fn signal_cm() void {
