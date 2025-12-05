@@ -19,6 +19,11 @@ const T = enum(u3) {
     X1, X2, X3,
 };
 
+// ---------------------------------------
+// |              Intel 4001             |
+// |  256 x 8-Bit Mask Programmable ROM  |
+// |          and 4-Bit I/O Port         |
+// ---------------------------------------
 pub const I4001 = struct {
     // Static Data //
     rom: [0x100]u8,

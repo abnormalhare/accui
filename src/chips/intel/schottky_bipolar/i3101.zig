@@ -9,6 +9,11 @@ const Motherboard = @import("../../../motherboard.zig");
 const signal_read  = Motherboard.signal_read;
 const signal_write = Motherboard.signal_write;
 
+// ---------------------------------------
+// |              Intel 3101             |
+// |   High Speed Fully Decoded 64 Bit   |
+// |                Memory               |
+// ---------------------------------------
 pub const I3101 = struct {
     ram: [16]u4,
 

@@ -24,6 +24,10 @@ const Reg = struct {
     stat:  [4]u4,
 };
 
+// ---------------------------------------
+// |              Intel 4002             |
+// |  320 Bit RAM and 4-Bit Output Port  |
+// ---------------------------------------
 pub const I4002 = struct {
     // Main Information //
     ram: [4]Reg,

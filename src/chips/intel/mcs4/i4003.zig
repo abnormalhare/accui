@@ -9,6 +9,11 @@ const Motherboard = @import("../../../motherboard.zig");
 const signal_read  = Motherboard.signal_read;
 const signal_write = Motherboard.signal_write;
 
+// ---------------------------------------
+// |              Intel 4003             |
+// |    10-Bit Serial-In Parallel-Out    |
+// |      Serial-Out Shift Register      |
+// ---------------------------------------
 pub const I4003 = struct {
     // Main Information //
     shift: u10,

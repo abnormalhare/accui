@@ -10,6 +10,7 @@ pub const Step = enum {
 pub const CompType = enum {
     I1101A,
     I1103,
+    I2101,
     I3101,
     I4001,
     I4002,

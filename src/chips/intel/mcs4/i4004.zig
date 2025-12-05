@@ -79,6 +79,11 @@ const Conditional = struct {
     }
 };
 
+// ---------------------------------------
+// |              Intel 4004             |
+// |     Single Chip 4-Bit P-Channel     |
+// |            Microprocessor           |
+// ---------------------------------------
 pub const I4004 = struct {
     // External Communication //
     data_bus: u4, // external & internal input

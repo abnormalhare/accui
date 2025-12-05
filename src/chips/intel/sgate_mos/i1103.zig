@@ -9,6 +9,11 @@ const Motherboard = @import("../../../motherboard.zig");
 const signal_read  = Motherboard.signal_read;
 const signal_write = Motherboard.signal_write;
 
+// ---------------------------------------
+// |             Intel 1101A             |
+// |     Fully Decoded Random Access     |
+// |       1024 Bit Dynamic Memory       |
+// ---------------------------------------
 pub const I1103 = struct {
     ram: [32][32]u1,
 
