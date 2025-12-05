@@ -20,6 +20,9 @@ pub const I1103 = struct {
     xreg: u5,
     yreg: u5,
 
+    data_in: u1,
+    data_out: u1,
+
     read_write: u1,
     chip_enable: u1,
     
@@ -40,6 +43,8 @@ pub const I1103 = struct {
 
         if (self.chip_enable == 0) return;
 
+        self.data_in = @truncate(list_to_num(signal_read(.I1103, 12), 1));
+
         const wiresx = signal_read(.I1103, 1);
         self.xreg = @truncate(list_to_num(wiresx, 5));
         
@@ -48,12 +53,12 @@ pub const I1103 = struct {
         
         switch (self.read_write) {
             0 => {
-                var out: [4]u1 = [_]u1{ ~self.ram[self.yreg][self.xreg] };
+                self.data_out = ~self.ram[self.yreg][self.xreg];
+                var out: [4]u1 = [_]u1{ 0 };
                 signal_write(&out, .I1103, 1);
             },
             1 => {
-                const wires = signal_read(.I1103, 12);
-                self.ram[self.yreg][self.xreg] = @truncate(list_to_num(wires, 1));
+                self.ram[self.yreg][self.xreg] = self.data_in;
             }
         }
     }
