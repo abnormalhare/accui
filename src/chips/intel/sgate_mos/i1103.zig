@@ -17,10 +17,12 @@ const signal_write = Motherboard.signal_write;
 pub const I1103 = struct {
     ram: [32][32]u1,
 
+    xreg: u5,
+    yreg: u5,
+
     read_write: u1,
     chip_enable: u1,
     
-
     pub fn init(alloc: std.mem.Allocator) !*I1103 {
         const self = try alloc.create(I1103);
 
@@ -39,19 +41,19 @@ pub const I1103 = struct {
         if (self.chip_enable == 0) return;
 
         const wiresx = signal_read(.I1103, 1);
-        const xreg: u5 = @truncate(list_to_num(wiresx, 5));
+        self.xreg = @truncate(list_to_num(wiresx, 5));
         
         const wiresy = signal_read(.I1103, 6);
-        const yreg: u5 = @truncate(list_to_num(wiresy, 5));
+        self.yreg = @truncate(list_to_num(wiresy, 5));
         
         switch (self.read_write) {
             0 => {
-                var out: [4]u1 = [_]u1{ ~self.ram[yreg][xreg] };
+                var out: [4]u1 = [_]u1{ ~self.ram[self.yreg][self.xreg] };
                 signal_write(&out, .I1103, 1);
             },
             1 => {
                 const wires = signal_read(.I1103, 12);
-                self.ram[yreg][xreg] = @truncate(list_to_num(wires, 1));
+                self.ram[self.yreg][self.xreg] = @truncate(list_to_num(wires, 1));
             }
         }
     }

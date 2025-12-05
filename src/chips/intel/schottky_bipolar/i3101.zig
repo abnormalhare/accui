@@ -17,6 +17,11 @@ const signal_write = Motherboard.signal_write;
 pub const I3101 = struct {
     ram: [16]u4,
 
+    data_in: u4,
+    data_out: u4,
+
+    addr: u4,
+
     write_enable: u1,
     chip_select: u1,
 
@@ -35,18 +40,20 @@ pub const I3101 = struct {
         self.write_enable = @truncate(list_to_num(signal_read(.I3101, 3), 1));
         self.chip_select  = @truncate(list_to_num(signal_read(.I3101, 2), 1));
 
+        self.data_in = @truncate(list_to_num(signal_read(.I3101, 6), 4));
+
         if (self.chip_select == 0) {
             const wires = signal_read(.I3101, 1);
-            const addr: u4 = @truncate(list_to_num(wires, 4));
+            self.addr = @truncate(list_to_num(wires, 4));
 
+            self.out = self.ram[self.addr];
             var out: [4]u1 = [_]u1{ 0 } ** 4;
-            num_to_list(&out, self.ram[addr], 4);
+            num_to_list(&out, self.out, 4);
             signal_write(&out, .I3101, 5);
         }
 
         if (self.write_enable == 1) {
-            const wires = signal_read(.I3101, 6);
-            self.ram[self.addr] = @truncate(list_to_num(wires, 4));
+            self.ram[self.addr] = self.data_in;
         }
     }
 };
